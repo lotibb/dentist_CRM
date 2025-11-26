@@ -9,6 +9,7 @@ const { PORT, NODE_ENV } = require('./src/config/server.config');
 // Importar conexiones a bases de datos
 const { pool: postgresPool, connect: connectPostgreSQL, close: closePostgreSQL } = require('./src/database/postgresql.connection');
 const { client: redisClient, connect: connectRedis, close: closeRedis } = require('./src/database/redis.connection');
+const { mongoose, connect: connectMongoDB, close: closeMongoDB } = require('./src/database/mongodb.connection');
 
 // Importar rutas
 // const patientRoutes = require('./src/routes/patient.routes');
@@ -54,7 +55,8 @@ app.get('/health', async (req, res) => {
     },
     databases: {
       postgresql: { status: 'unknown' },
-      redis: { status: 'unknown' }
+      redis: { status: 'unknown' },
+      mongodb: { status: 'unknown' }
     }
   };
 
@@ -101,6 +103,31 @@ app.get('/health', async (req, res) => {
     };
   }
 
+  // Verificar MongoDB
+  try {
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.db.admin().ping();
+      healthStatus.databases.mongodb = {
+        status: 'connected',
+        message: 'MongoDB is connected'
+      };
+    } else {
+      healthStatus.databases.mongodb = {
+        status: 'disconnected',
+        message: `MongoDB connection state: ${mongoose.connection.readyState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`
+      };
+    }
+  } catch (error) {
+    healthStatus.databases.mongodb = {
+      status: 'disconnected',
+      message: 'MongoDB connection failed',
+      error: {
+        message: error.message,
+        code: error.code || 'UNKNOWN'
+      }
+    };
+  }
+
   res.status(200).json(healthStatus);
 });
 
@@ -126,6 +153,7 @@ const startServer = async () => {
     // Conectar a las bases de datos
     await connectPostgreSQL();
     await connectRedis();
+    await connectMongoDB();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
@@ -162,6 +190,7 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
   await closePostgreSQL();
   await closeRedis();
+  await closeMongoDB();
   process.exit(0);
 });
 
@@ -169,6 +198,7 @@ process.on('SIGINT', async () => {
   console.log('SIGINT signal received: closing HTTP server');
   await closePostgreSQL();
   await closeRedis();
+  await closeMongoDB();
   process.exit(0);
 });
 
