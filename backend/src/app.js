@@ -4,19 +4,14 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 // Importar configuración
-const { PORT, NODE_ENV } = require('./src/config/server.config');
+const { PORT, NODE_ENV } = require('./config/server.config');
 
 // Importar conexiones a bases de datos
-const { pool: postgresPool, connect: connectPostgreSQL, close: closePostgreSQL } = require('./src/database/postgresql.connection');
-const { client: redisClient, connect: connectRedis, close: closeRedis } = require('./src/database/redis.connection');
+const { sequelize, connect, close } = require('./database/postgresql.connection');
+const { client: redisClient, connect: connectRedis, close: closeRedis } = require('./database/redis.connection');
 
-// Importar rutas
-// const patientRoutes = require('./src/routes/patient.routes');
-// const appointmentRoutes = require('./src/routes/appointment.routes');
-// const authRoutes = require('./src/routes/auth.routes');
-
-// Importar middleware de manejo de errores
-// const errorHandler = require('./src/middleware/errorHandler.middleware');
+// Cargar las asociaciones entre modelos
+require('./models/associations');
 
 // Crear aplicación Express
 const app = express();
@@ -39,18 +34,22 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
-      // api: '/api' // Descomenta cuando agregues rutas
+      dentistas: '/dentistas',
+      pacientes: '/pacientes',
+      citas: '/citas'
     }
   });
 });
 
-// Ruta de salud/health check
+// Health Check
 app.get('/health', async (req, res) => {
   const healthStatus = {
     server: {
       status: 'running',
       message: 'Server is operational',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
     },
     databases: {
       postgresql: { status: 'unknown' },
@@ -60,10 +59,18 @@ app.get('/health', async (req, res) => {
 
   // Verificar PostgreSQL
   try {
-    await postgresPool.query('SELECT 1');
+    await sequelize.authenticate();
+    const [dbVersion] = await sequelize.query('SELECT version()');
+    const [tableCount] = await sequelize.query(
+      "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = 'public'"
+    );
+    
     healthStatus.databases.postgresql = {
       status: 'connected',
-      message: 'PostgreSQL is connected'
+      message: 'PostgreSQL is connected',
+      type: 'PostgreSQL',
+      tables: tableCount[0].count,
+      version: dbVersion[0]?.version || 'unknown'
     };
   } catch (error) {
     healthStatus.databases.postgresql = {
@@ -101,13 +108,19 @@ app.get('/health', async (req, res) => {
     };
   }
 
-  res.status(200).json(healthStatus);
+  // Determinar el estado general
+  const allConnected = 
+    healthStatus.databases.postgresql.status === 'connected' &&
+    healthStatus.databases.redis.status === 'connected';
+  
+  const statusCode = allConnected ? 200 : 503;
+  res.status(statusCode).json(healthStatus);
 });
 
 // Rutas de la API
-// app.use('/api/auth', authRoutes);
-// app.use('/api/patients', patientRoutes);
-// app.use('/api/appointments', appointmentRoutes);
+app.use('/dentistas', require('./routes/dentistas'));
+app.use('/pacientes', require('./routes/pacientes'));
+app.use('/citas', require('./routes/citas'));
 
 // Ruta 404 para rutas no encontradas
 app.use('*', (req, res) => {
@@ -117,15 +130,16 @@ app.use('*', (req, res) => {
   });
 });
 
-// Middleware de manejo de errores (debe ir al final)
-// app.use(errorHandler);
-
 // Iniciar servidor
 const startServer = async () => {
   try {
     // Conectar a las bases de datos
-    await connectPostgreSQL();
-    await connectRedis();
+    await connect();
+    try {
+      await connectRedis();
+    } catch (redisError) {
+      console.warn('⚠️  Redis connection failed (optional):', redisError.message);
+    }
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
@@ -160,14 +174,14 @@ process.on('uncaughtException', (err) => {
 // Cerrar conexiones a las bases de datos al terminar la aplicación
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
-  await closePostgreSQL();
+  await close();
   await closeRedis();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT signal received: closing HTTP server');
-  await closePostgreSQL();
+  await close();
   await closeRedis();
   process.exit(0);
 });
@@ -176,4 +190,3 @@ process.on('SIGINT', async () => {
 startServer();
 
 module.exports = app;
-
