@@ -233,7 +233,7 @@ async function findById(id, session = null) {
  */
 async function createExpediente(data) {
   const session = client.startSession();
-  let resultExpediente = null;
+  let insertedId = null;
   
   try {
     await session.withTransaction(async () => {
@@ -253,57 +253,35 @@ async function createExpediente(data) {
       );
       
       if (existing) {
-        // Si existe, actualizar el expediente existente con los nuevos datos
-        // Esto permite agregar información de nuevas consultas al expediente médico
-        const updateData = {
-          ...expediente,
-          // Preservar createdAt del expediente original
-          createdAt: existing.createdAt
-        };
-        
-        const result = await collection.updateOne(
-          { _id: existing._id },
-          { $set: updateData },
-          { session }
-        );
-        
-        if (result.matchedCount === 0) {
-          throw new Error('Error al actualizar el expediente existente');
-        }
-        
-        // Obtener el expediente actualizado
-        resultExpediente = await collection.findOne(
-          { _id: existing._id },
-          { session }
-        );
-      } else {
-        // Si no existe, crear un nuevo expediente médico
-        const result = await collection.insertOne(expediente, { session });
-        
-        if (!result.insertedId) {
-          throw new Error('Error al crear el expediente');
-        }
-        
-        // Obtener el expediente creado
-        resultExpediente = await collection.findOne(
-          { _id: result.insertedId },
-          { session }
-        );
+        throw new Error('Ya existe un expediente para este paciente y dentista. Use la función de actualización para modificar el expediente existente.');
       }
       
-      if (!resultExpediente) {
-        throw new Error('Error al recuperar el expediente');
+      // Si no existe, crear un nuevo expediente médico
+      const result = await collection.insertOne(expediente, { session });
+      
+      if (!result.insertedId) {
+        throw new Error('Error al crear el expediente');
       }
+      
+      insertedId = result.insertedId;
     }, {
       readConcern: { level: 'majority' },
       writeConcern: { w: 'majority' }
     });
     
-    return formatExpediente(resultExpediente);
+    // Obtener el expediente creado después de la transacción
+    const collection = getCollection();
+    const created = await collection.findOne({ _id: insertedId });
+    
+    if (!created) {
+      throw new Error('Error al recuperar el expediente creado');
+    }
+    
+    return formatExpediente(created);
   } catch (error) {
-    // Handle duplicate key error (unique index violation) - should not happen with current logic
+    // Handle duplicate key error (unique index violation) - fallback protection
     if (error.code === 11000 || error.codeName === 'DuplicateKey') {
-      throw new Error('Ya existe un expediente para este paciente y dentista');
+      throw new Error('Ya existe un expediente para este paciente y dentista. Use la función de actualización para modificar el expediente existente.');
     }
     throw new Error(`Error al crear expediente: ${error.message}`);
   } finally {
