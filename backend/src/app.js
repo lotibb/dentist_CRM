@@ -182,6 +182,9 @@ const startServer = async () => {
     }
     try {
       await connectMongo();
+      // Initialize indexes for expedientes (unique constraints)
+      const { initializeIndexes } = require('./services/expedienteService');
+      await initializeIndexes();
     } catch (mongoError) {
       console.warn('⚠️  MongoDB connection failed (optional):', mongoError.message);
     }

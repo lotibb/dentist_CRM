@@ -4,6 +4,36 @@ const { getDb, client } = require('../database/mongodb.connection');
 const COLLECTION_NAME = 'expedientes';
 
 /**
+ * Inicializar índices únicos para prevenir duplicados a nivel de base de datos
+ * Esto es crítico para el manejo de concurrencia
+ */
+async function initializeIndexes() {
+  try {
+    const collection = getCollection();
+    
+    // Crear índice único compuesto para prevenir duplicados
+    // Un paciente solo puede tener UN expediente por dentista (expediente médico general)
+    await collection.createIndex(
+      { 
+        id_paciente: 1, 
+        id_dentista: 1
+      },
+      { 
+        unique: true,
+        name: 'unique_expediente_paciente_dentista'
+      }
+    );
+    
+    console.log('✅ MongoDB indexes initialized for expedientes');
+  } catch (error) {
+    // Si el índice ya existe, ignorar el error
+    if (error.code !== 85 && error.codeName !== 'IndexOptionsConflict') {
+      console.warn('⚠️  Error initializing indexes (may already exist):', error.message);
+    }
+  }
+}
+
+/**
  * Obtener la colección de expedientes
  * Note: Session is passed to individual operations, not to the collection itself
  */
@@ -203,7 +233,7 @@ async function findById(id, session = null) {
  */
 async function createExpediente(data) {
   const session = client.startSession();
-  let insertedId = null;
+  let resultExpediente = null;
   
   try {
     await session.withTransaction(async () => {
@@ -212,43 +242,69 @@ async function createExpediente(data) {
       
       const collection = getCollection();
       
-      // Verificar si ya existe un expediente con los mismos datos críticos
-      // para prevenir duplicados en condiciones de concurrencia
+      // Verificar si ya existe un expediente para este paciente y dentista
+      // Un paciente solo puede tener UN expediente médico por dentista
       const existing = await collection.findOne(
         {
           id_paciente: expediente.id_paciente,
-          id_dentista: expediente.id_dentista,
-          fecha_consulta: expediente.fecha_consulta
+          id_dentista: expediente.id_dentista
         },
         { session }
       );
       
       if (existing) {
-        throw new Error('Ya existe un expediente para este paciente, dentista y fecha de consulta');
+        // Si existe, actualizar el expediente existente con los nuevos datos
+        // Esto permite agregar información de nuevas consultas al expediente médico
+        const updateData = {
+          ...expediente,
+          // Preservar createdAt del expediente original
+          createdAt: existing.createdAt
+        };
+        
+        const result = await collection.updateOne(
+          { _id: existing._id },
+          { $set: updateData },
+          { session }
+        );
+        
+        if (result.matchedCount === 0) {
+          throw new Error('Error al actualizar el expediente existente');
+        }
+        
+        // Obtener el expediente actualizado
+        resultExpediente = await collection.findOne(
+          { _id: existing._id },
+          { session }
+        );
+      } else {
+        // Si no existe, crear un nuevo expediente médico
+        const result = await collection.insertOne(expediente, { session });
+        
+        if (!result.insertedId) {
+          throw new Error('Error al crear el expediente');
+        }
+        
+        // Obtener el expediente creado
+        resultExpediente = await collection.findOne(
+          { _id: result.insertedId },
+          { session }
+        );
       }
       
-      const result = await collection.insertOne(expediente, { session });
-      
-      if (!result.insertedId) {
-        throw new Error('Error al crear el expediente');
+      if (!resultExpediente) {
+        throw new Error('Error al recuperar el expediente');
       }
-      
-      insertedId = result.insertedId;
     }, {
       readConcern: { level: 'majority' },
       writeConcern: { w: 'majority' }
     });
     
-    // Obtener el expediente creado después de la transacción
-    const collection = getCollection();
-    const created = await collection.findOne({ _id: insertedId });
-    
-    if (!created) {
-      throw new Error('Error al recuperar el expediente creado');
-    }
-    
-    return formatExpediente(created);
+    return formatExpediente(resultExpediente);
   } catch (error) {
+    // Handle duplicate key error (unique index violation) - should not happen with current logic
+    if (error.code === 11000 || error.codeName === 'DuplicateKey') {
+      throw new Error('Ya existe un expediente para este paciente y dentista');
+    }
     throw new Error(`Error al crear expediente: ${error.message}`);
   } finally {
     await session.endSession();
@@ -284,29 +340,30 @@ async function updateExpediente(id, data) {
         throw new Error('Expediente no encontrado');
       }
 
-      // Si se está actualizando fecha_consulta, verificar duplicados
-      if (updateData.fecha_consulta && 
-          (updateData.id_paciente !== undefined || updateData.id_dentista !== undefined)) {
+      // Si se está actualizando paciente o dentista, verificar que no exista otro expediente
+      // Un paciente solo puede tener UN expediente por dentista
+      if (updateData.id_paciente !== undefined || updateData.id_dentista !== undefined) {
         const pacienteId = updateData.id_paciente !== undefined 
           ? updateData.id_paciente 
           : current.id_paciente;
         const dentistaId = updateData.id_dentista !== undefined 
           ? updateData.id_dentista 
           : current.id_dentista;
-        const fechaConsulta = updateData.fecha_consulta;
 
-        const duplicate = await collection.findOne(
-          {
-            _id: { $ne: new ObjectId(id) },
-            id_paciente: pacienteId,
-            id_dentista: dentistaId,
-            fecha_consulta: fechaConsulta
-          },
-          { session }
-        );
+        // Solo verificar si se está cambiando el paciente o dentista
+        if (pacienteId !== current.id_paciente || dentistaId !== current.id_dentista) {
+          const duplicate = await collection.findOne(
+            {
+              _id: { $ne: new ObjectId(id) },
+              id_paciente: pacienteId,
+              id_dentista: dentistaId
+            },
+            { session }
+          );
 
-        if (duplicate) {
-          throw new Error('Ya existe otro expediente para este paciente, dentista y fecha de consulta');
+          if (duplicate) {
+            throw new Error('Ya existe otro expediente para este paciente y dentista');
+          }
         }
       }
 
@@ -390,6 +447,7 @@ module.exports = {
   findById,
   createExpediente,
   updateExpediente,
-  deleteExpediente
+  deleteExpediente,
+  initializeIndexes
 };
 
