@@ -1,14 +1,83 @@
 # Dentist CRM - Setup and Architecture Guide
 
+## 📚 Documentación del Proyecto
+
+Este proyecto incluye documentación completa organizada en varios archivos. Use este índice para navegar:
+
+### 📖 Documentos Principales
+
+| Documento | Descripción | Audiencia |
+|-----------|-------------|-----------|
+| **[README.md](./README.md)** | Guía de configuración, arquitectura y desarrollo | Desarrolladores |
+| **[TECNOLOGIAS.md](./TECNOLOGIAS.md)** | Tecnologías, lenguajes y bases de datos utilizadas | Desarrolladores, Arquitectos |
+| **[MANUAL_USUARIO.md](./MANUAL_USUARIO.md)** | Manual de usuario para usuarios finales | Usuarios finales, Recepcionistas, Dentistas |
+| **[DEPLOYMENT.md](./DEPLOYMENT.md)** | Guía de despliegue en Render | DevOps, Desarrolladores |
+| **[DICCIONARIO_DATOS.md](./DICCIONARIO_DATOS.md)** | Diccionario de datos de ambas bases de datos | Desarrolladores, DBA |
+
+### 🗂️ Scripts de Base de Datos
+
+| Script | Descripción |
+|--------|-------------|
+| **[backend/scripts/postgresql.sql](./backend/scripts/postgresql.sql)** | Script SQL para crear estructura de PostgreSQL |
+| **[backend/scripts/mongodb.js](./backend/scripts/mongodb.js)** | Script JavaScript para crear estructura de MongoDB |
+
+### 📋 Contenido de Cada Documento
+
+#### [README.md](./README.md) - Este archivo
+- ✅ Configuración del proyecto
+- ✅ Estructura de archivos
+- ✅ Cómo ejecutar el proyecto
+- ✅ Endpoints de API
+- ✅ Arquitectura del sistema
+- ✅ Troubleshooting técnico
+
+#### [TECNOLOGIAS.md](./TECNOLOGIAS.md)
+- ✅ Lenguajes de programación (JavaScript/Node.js)
+- ✅ Frameworks y librerías (Express, React, Sequelize, etc.)
+- ✅ Bases de datos (PostgreSQL, MongoDB, Redis)
+- ✅ Arquitectura de datos híbrida
+- ✅ Herramientas de desarrollo
+- ✅ Estándares y convenciones
+- ✅ Seguridad y rendimiento
+
+#### [MANUAL_USUARIO.md](./MANUAL_USUARIO.md)
+- ✅ Introducción al sistema
+- ✅ Cómo usar cada funcionalidad
+- ✅ Gestión de pacientes
+- ✅ Gestión de citas
+- ✅ Gestión de expedientes médicos
+- ✅ Flujos de trabajo comunes
+- ✅ Solución de problemas para usuarios
+- ✅ Preguntas frecuentes
+
+#### [DEPLOYMENT.md](./DEPLOYMENT.md)
+- ✅ Guía paso a paso para desplegar en Render
+- ✅ Configuración de servicios
+- ✅ Variables de entorno
+- ✅ Troubleshooting de deployment
+- ✅ Configuración de frontend y backend
+
+#### [DICCIONARIO_DATOS.md](./DICCIONARIO_DATOS.md)
+- ✅ Estructura completa de tablas PostgreSQL
+- ✅ Estructura completa de colecciones MongoDB
+- ✅ Campos, tipos y restricciones
+- ✅ Relaciones entre entidades
+- ✅ Índices y constraints
+
+---
+
 ## 📋 Project Overview
 
-This is a full-stack Dentist CRM (Customer Relationship Management) application built with:
-- **Frontend**: React with React Router and Vite
-- **Backend**: Node.js with Express
-- **Databases**: 
-  - PostgreSQL with Sequelize ORM (for pacientes, dentistas, citas)
-  - MongoDB (for expedientes/medical records)
-- **Cache**: Redis (optional, for caching)
+Sistema CRM para consultorios dentales que permite gestionar pacientes, citas y expedientes médicos.
+
+**Stack tecnológico:**
+- Frontend: React + Vite
+- Backend: Node.js + Express
+- Bases de datos: PostgreSQL (datos estructurados) + MongoDB (expedientes)
+- Cache: Redis (opcional)
+
+> 📖 **Para información detallada sobre tecnologías**: Ver [TECNOLOGIAS.md](./TECNOLOGIAS.md)
+
 
 ## 🏗️ Project Structure
 
@@ -213,41 +282,22 @@ dentist_CRM/
 - `PUT /expedientes/:id` - Update medical record
 - `DELETE /expedientes/:id` - Delete medical record
 
-## 🗄️ Database Models
-
-The application uses Sequelize ORM with the following models:
-
-- **Paciente** (Patient): `id_paciente`, `nombre`, `telefono`, `correo`, `fecha_nacimiento`
-- **Dentista** (Dentist): `id_dentista`, `nombre`, `telefono`, `correo`, `especialidad`
-- **Cita** (Appointment): `id_cita`, `id_paciente`, `id_dentista`, `fecha_cita`, `motivo`, `estado`
-
-### Relationships
-
-- A Patient can have many Appointments
-- A Dentist can have many Appointments
-- An Appointment belongs to one Patient and one Dentist
-
 ## 🔧 Configuration
 
-### Backend Configuration
+### Environment Variables
 
-- **Port**: Configurable via `PORT` environment variable (default: 3000)
-- **Environment**: Set via `NODE_ENV` (development/production)
-- **CORS**: Configurable via `CORS_ORIGIN` environment variable
-- **Databases**: 
-  - PostgreSQL connection via Sequelize ORM (for pacientes, dentistas, citas)
-  - MongoDB connection (for expedientes/medical records)
-- **Cache**: Redis connection (optional)
-- **Logging**: Morgan middleware in development mode
-- **Error Handling**: Comprehensive error handling with graceful shutdown
+**Backend** (`.env` file):
+- `PORT` - Server port (default: 3000)
+- `NODE_ENV` - Environment mode (development/production)
+- `POSTGRESQL_URI` - PostgreSQL connection string
+- `MONGODB_URI` - MongoDB connection string (optional)
+- `REDIS_URI` - Redis connection string (optional)
+- `CORS_ORIGIN` - Allowed CORS origins (default: `*` for development)
 
-### Frontend Configuration
+**Frontend** (`.env.local` file):
+- `VITE_API_URL` - Backend API URL (default: `http://localhost:3000`)
 
-- **Port**: Default `5173` (Vite default, configurable in `vite.config.js`)
-- **API Base URL**: Configurable via `VITE_API_URL` environment variable (defaults to `http://localhost:3000`)
-- **Build Tool**: Vite with React plugin
-- **Router**: React Router v6 with BrowserRouter
-- **Environment Variables**: Only variables prefixed with `VITE_` are exposed to client code
+> 📖 **Para detalles completos de configuración**: Ver [TECNOLOGIAS.md](./TECNOLOGIAS.md)
 
 ## 🏥 Health Check Endpoint
 
@@ -290,63 +340,36 @@ The `/health` endpoint provides comprehensive status information:
 
 ## 🐛 Troubleshooting
 
-### Backend won't start
-- Check PostgreSQL is running and accessible
-- Verify `.env` file exists in `backend/` directory with correct database credentials
-- Check if port 3000 is already in use
-- Ensure Sequelize is installed: `npm install sequelize`
+### Desarrollo Local
 
-### Frontend can't connect to backend
-- Ensure backend is running on port 3000
-- Check `VITE_API_URL` is set correctly (or defaults to `http://localhost:3000`)
-- Verify `CORS_ORIGIN` in backend includes frontend URL (or set to `*` for development)
-- Check browser console for CORS errors
-- In production, ensure `VITE_API_URL` is set and frontend is rebuilt (env vars are injected at build time)
+**Backend no inicia:**
+- Verificar que PostgreSQL esté corriendo
+- Verificar que el archivo `.env` existe con las credenciales correctas
+- Verificar que el puerto 3000 no esté en uso
 
-### Database connection errors
-- Verify PostgreSQL is running
-- Check database credentials in `backend/.env`
-- Ensure database exists: `CREATE DATABASE dentist_crm;`
-- Verify `POSTGRESQL_URI` format: `postgresql://user:password@host:port/database`
+**Frontend no se conecta al backend:**
+- Verificar que el backend esté corriendo en el puerto 3000
+- Verificar `VITE_API_URL` en `.env.local` (o usa el default `http://localhost:3000`)
+- Verificar `CORS_ORIGIN` en el backend (debe ser `*` en desarrollo)
 
-### Redis connection errors
-- Redis is optional - the app will work without it
-- If you see Redis warnings, you can ignore them or set up Redis
-- To disable Redis, simply don't set `REDIS_URI` in `.env`
+**Errores de conexión a base de datos:**
+- Verificar que PostgreSQL esté corriendo
+- Verificar las credenciales en `backend/.env`
+- Verificar que la base de datos exista
+
+> 📖 **Para troubleshooting de deployment**: Ver [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ## 📝 Development Notes
 
-### Backend Architecture
+### Arquitectura
 
-- **Entry Point**: `backend/src/app.js` (uses `startServer()` function for proper async initialization)
-- **Database**: Uses Sequelize ORM with connection management in `postgresql.connection.js`
-- **Services**: Modular service layer separated by domain:
-  - `appointmentService.js` - Appointment business logic (PostgreSQL)
-  - `dentistService.js` - Dentist business logic (PostgreSQL)
-  - `expedienteService.js` - Medical records business logic (MongoDB)
-  - `patientService.js` - Patient business logic (PostgreSQL)
-- **Error Handling**: Comprehensive error handling with unhandled rejection/exception handlers
-- **Graceful Shutdown**: Properly closes database connections on SIGTERM/SIGINT
-- **Transactions**: All database operations use Sequelize transactions for data integrity
+- **Backend**: Express.js con capa de servicios modular (MVC)
+- **Frontend**: React con React Router y Axios para API calls
+- **Bases de datos**: PostgreSQL (Sequelize) para datos estructurados, MongoDB para expedientes
+- **Transacciones**: Todas las operaciones críticas usan transacciones para integridad de datos
 
-### Frontend Architecture
-
-- **Entry Point**: `frontend/src/main.jsx`
-- **Routing**: React Router v6 with BrowserRouter
-- **State Management**: React hooks (useState, useEffect)
-- **API Client**: Axios for HTTP requests
-- **API Configuration**: Centralized in `frontend/src/config/api.config.js` using environment variables
-- **Language**: Spanish UI (all user-facing text is in Spanish)
-
-### Project Organization
-
-- **Backend** and **Frontend** are in separate folders for clear separation
-- Each has its own `package.json` and dependencies
-- Environment variables are managed per project (backend uses `.env`)
-- **Backend Services**: Modular architecture with separate service files for each domain model
-- **Language**: 
-  - Backend: Spanish naming (models, routes, controllers use Spanish)
-  - Frontend: Spanish UI (all user-facing text in Spanish)
+> 📖 **Para detalles completos de arquitectura y tecnologías**: Ver [TECNOLOGIAS.md](./TECNOLOGIAS.md)  
+> 📖 **Para estructura de datos**: Ver [DICCIONARIO_DATOS.md](./DICCIONARIO_DATOS.md)
 
 ## 🚀 Quick Start
 

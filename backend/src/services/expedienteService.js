@@ -330,16 +330,16 @@ async function updateExpediente(id, data) {
 
         // Solo verificar si se está cambiando el paciente o dentista
         if (pacienteId !== current.id_paciente || dentistaId !== current.id_dentista) {
-          const duplicate = await collection.findOne(
-            {
-              _id: { $ne: new ObjectId(id) },
-              id_paciente: pacienteId,
+        const duplicate = await collection.findOne(
+          {
+            _id: { $ne: new ObjectId(id) },
+            id_paciente: pacienteId,
               id_dentista: dentistaId
-            },
-            { session }
-          );
+          },
+          { session }
+        );
 
-          if (duplicate) {
+        if (duplicate) {
             throw new Error('Ya existe otro expediente para este paciente y dentista');
           }
         }
