@@ -20,13 +20,15 @@ This guide covers deploying the Dentist CRM frontend to Render as a static site.
 ### Manual Deployment
 
 1. **Create Static Site**:
-   - Go to Render dashboard → "New +" → "Static Site"
+   - Go to Render dashboard → "New +" → "Static Site" (NOT Web Service)
    - Connect your Git repository
 
 2. **Configure Build**:
    - **Name**: `dentist-crm-frontend`
+   - **Environment**: Make sure it says "Static Site" (not "Web Service")
    - **Build Command**: `cd frontend && npm install && npm run build`
    - **Publish Directory**: `frontend/dist`
+   - ⚠️ **Important**: Do NOT set a Start Command (static sites don't need one)
 
 3. **Set Environment Variable**:
    - **Key**: `VITE_API_URL`

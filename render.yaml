@@ -2,6 +2,7 @@ services:
   - type: web
     name: dentist-crm-backend
     env: node
+    plan: free
     buildCommand: cd backend && npm install
     startCommand: cd backend && npm start
     envVars:
@@ -14,7 +15,7 @@ services:
           property: port
       - key: POSTGRESQL_URI
         fromDatabase:
-          name: dentist-crm-db
+          name: db_avanadas
           property: connectionString
       # Optional: Uncomment if using Redis
       # - key: REDIS_URI
@@ -32,9 +33,9 @@ services:
       # - key: CORS_ORIGIN
       #   value: https://dentist-crm-frontend.onrender.com
 
-  - type: web
+  - type: static
     name: dentist-crm-frontend
-    env: static
+    plan: free
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
     envVars:
@@ -43,9 +44,10 @@ services:
       - key: VITE_API_URL
         value: https://dentist-crm-backend.onrender.com
 
-databases:
-  - name: dentist-crm-db
-    databaseName: dentist_crm
-    user: dentist_crm_user
-    plan: free
+# Database already exists - using existing service: db_avanadas
+# databases:
+#   - name: dentist-crm-db
+#     databaseName: dentist_crm
+#     user: dentist_crm_user
+#     plan: free
 
