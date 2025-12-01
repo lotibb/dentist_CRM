@@ -1,5 +1,7 @@
 import axios from "axios";
-const API = "http://localhost:3000/expedientes";
+import API_BASE_URL from "../config/api.config";
+
+const API = `${API_BASE_URL}/expedientes`;
 
 export const getExpedientes = () => axios.get(API);
 export const getExpediente = (id) => axios.get(`${API}/${id}`);

@@ -1,4 +1,6 @@
 import axios from "axios";
-const API = "http://localhost:3000/dentistas";
+import API_BASE_URL from "../config/api.config";
+
+const API = `${API_BASE_URL}/dentistas`;
 
 export const getDentistas = () => axios.get(API);

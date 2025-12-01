@@ -1,6 +1,6 @@
 # Deployment Guide for Render
 
-This guide will help you deploy the Dentist CRM backend to Render.
+This guide will help you deploy the Dentist CRM backend and frontend to Render.
 
 ## Prerequisites
 
@@ -130,12 +130,52 @@ Render will automatically use the `/health` endpoint for health checks. The endp
 - Verify database services are running
 - Redis and MongoDB are optional - app will work without them
 
+## Frontend Deployment
+
+### Option A: Using render.yaml (Recommended)
+
+The `render.yaml` file includes frontend configuration. When deploying via Blueprint:
+
+1. The frontend will be automatically configured as a static site
+2. Set `VITE_API_URL` to your backend URL (e.g., `https://dentist-crm-backend.onrender.com`)
+3. Render will build and serve the static files
+
+### Option B: Manual Frontend Setup
+
+1. Go to Render dashboard → "New +" → "Static Site"
+2. Connect your repository
+3. Configure:
+   - **Name**: `dentist-crm-frontend`
+   - **Build Command**: `cd frontend && npm install && npm run build`
+   - **Publish Directory**: `frontend/dist`
+4. Add Environment Variable:
+   - **Key**: `VITE_API_URL`
+   - **Value**: `https://your-backend-service.onrender.com` (your actual backend URL)
+
+### Important Notes for Frontend
+
+- **Build-time Variables**: Vite requires environment variables to be prefixed with `VITE_`
+- **API URL**: Set `VITE_API_URL` to your backend service URL (without trailing slash)
+- **CORS**: Make sure your backend `CORS_ORIGIN` includes your frontend URL
+- **Build Output**: Vite builds to `frontend/dist` directory
+
+### Frontend Environment Variables
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `VITE_API_URL` | Yes | Backend API base URL | `https://dentist-crm-backend.onrender.com` |
+
+**Note**: After deploying the backend, copy its URL and set it as `VITE_API_URL` in the frontend service.
+
 ## Post-Deployment
 
-1. **Update Frontend**: Update your frontend API base URL to point to your Render service
+1. **Connect Frontend to Backend**: 
+   - Set `VITE_API_URL` in frontend to your backend URL
+   - Set `CORS_ORIGIN` in backend to your frontend URL
 2. **Monitor Logs**: Regularly check Render logs for errors
 3. **Set up Auto-Deploy**: Render automatically deploys on git push (enabled by default)
 4. **Database Backups**: Consider setting up automatic backups for your PostgreSQL database
+5. **Test the Connection**: Visit your frontend URL and verify it can communicate with the backend
 
 ## Cost Considerations
 

@@ -1,5 +1,7 @@
 import axios from "axios";
-const API = "http://localhost:3000/citas";
+import API_BASE_URL from "../config/api.config";
+
+const API = `${API_BASE_URL}/citas`;
 
 export const createCita = (data) => axios.post(API, data);
 export const getCitas = () => axios.get(API);

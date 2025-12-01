@@ -28,6 +28,20 @@ services:
       #     type: mongodb
       #     name: dentist-crm-mongodb
       #     property: connectionString
+      # CORS: Set to your frontend URL after deployment
+      # - key: CORS_ORIGIN
+      #   value: https://dentist-crm-frontend.onrender.com
+
+  - type: web
+    name: dentist-crm-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      # Set this to your backend URL after backend is deployed
+      # Replace with your actual backend URL
+      - key: VITE_API_URL
+        value: https://dentist-crm-backend.onrender.com
 
 databases:
   - name: dentist-crm-db
