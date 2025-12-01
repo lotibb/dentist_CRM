@@ -1,6 +1,7 @@
 import { Routes, Route, Link } from "react-router-dom";
 import PatientsPage from "./pages/PacientsPage";
 import NewCitaPage from "./pages/NewCitaPage";
+import ExpedientesPage from "./pages/ExpedientesPage";
 import "./App.css";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
         <div className="nav-links">
           <Link to="/patients" className="nav-link">👥 Pacientes</Link>
           <Link to="/citas/nueva" className="nav-link">📅 Nueva cita</Link>
+          <Link to="/expedientes" className="nav-link">📋 Expedientes</Link>
         </div>
       </nav>
 
@@ -21,6 +23,7 @@ export default function App() {
           <Route path="/" element={<PatientsPage />} />
           <Route path="/patients" element={<PatientsPage />} />
           <Route path="/citas/nueva" element={<NewCitaPage />} />
+          <Route path="/expedientes" element={<ExpedientesPage />} />
         </Routes>
       </main>
     </div>

@@ -9,6 +9,7 @@ const { PORT, NODE_ENV } = require('./config/server.config');
 // Importar conexiones a bases de datos
 const { sequelize, connect, close } = require('./database/postgresql.connection');
 const { client: redisClient, connect: connectRedis, close: closeRedis } = require('./database/redis.connection');
+const { client: mongoClient, db: mongoDb, connect: connectMongo, close: closeMongo, getDb } = require('./database/mongodb.connection');
 
 // Cargar las asociaciones entre modelos
 require('./models/associations');
@@ -53,7 +54,8 @@ app.get('/health', async (req, res) => {
     },
     databases: {
       postgresql: { status: 'unknown' },
-      redis: { status: 'unknown' }
+      redis: { status: 'unknown' },
+      mongodb: { status: 'unknown' }
     }
   };
 
@@ -108,10 +110,41 @@ app.get('/health', async (req, res) => {
     };
   }
 
+  // Verificar MongoDB
+  try {
+    if (mongoClient.topology && mongoClient.topology.isConnected()) {
+      const db = getDb();
+      await db.admin().ping();
+      const collections = await db.listCollections().toArray();
+      healthStatus.databases.mongodb = {
+        status: 'connected',
+        message: 'MongoDB is connected',
+        type: 'MongoDB',
+        collections: collections.length,
+        database: db.databaseName
+      };
+    } else {
+      healthStatus.databases.mongodb = {
+        status: 'disconnected',
+        message: 'MongoDB client is not connected'
+      };
+    }
+  } catch (error) {
+    healthStatus.databases.mongodb = {
+      status: 'disconnected',
+      message: 'MongoDB connection failed',
+      error: {
+        message: error.message,
+        code: error.code || 'UNKNOWN'
+      }
+    };
+  }
+
   // Determinar el estado general
   const allConnected = 
     healthStatus.databases.postgresql.status === 'connected' &&
-    healthStatus.databases.redis.status === 'connected';
+    healthStatus.databases.redis.status === 'connected' &&
+    healthStatus.databases.mongodb.status === 'connected';
   
   const statusCode = allConnected ? 200 : 503;
   res.status(statusCode).json(healthStatus);
@@ -121,6 +154,7 @@ app.get('/health', async (req, res) => {
 app.use('/dentistas', require('./routes/dentistas'));
 app.use('/pacientes', require('./routes/pacientes'));
 app.use('/citas', require('./routes/citas'));
+app.use('/expedientes', require('./routes/expedientes'));
 
 // Ruta 404 para rutas no encontradas
 app.use('*', (req, res) => {
@@ -139,6 +173,11 @@ const startServer = async () => {
       await connectRedis();
     } catch (redisError) {
       console.warn('⚠️  Redis connection failed (optional):', redisError.message);
+    }
+    try {
+      await connectMongo();
+    } catch (mongoError) {
+      console.warn('⚠️  MongoDB connection failed (optional):', mongoError.message);
     }
 
     app.listen(PORT, () => {
@@ -176,6 +215,7 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
   await close();
   await closeRedis();
+  await closeMongo();
   process.exit(0);
 });
 
@@ -183,6 +223,7 @@ process.on('SIGINT', async () => {
   console.log('SIGINT signal received: closing HTTP server');
   await close();
   await closeRedis();
+  await closeMongo();
   process.exit(0);
 });
 

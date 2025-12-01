@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPaciente, updatePaciente } from "../api/pacientes";
 import "../styles/PatientForm.css";
 
 export default function PatientForm({ reload, editing, setEditing }) {
+  const formRef = useRef(null);
   const [form, setForm] = useState({
     nombre: "",
     telefono: "",
@@ -15,6 +16,13 @@ export default function PatientForm({ reload, editing, setEditing }) {
   useEffect(() => {
     if (editing) {
       setForm(editing);
+      // Hacer scroll al formulario cuando se inicia la edición
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
     }
   }, [editing]);
 
@@ -67,7 +75,7 @@ export default function PatientForm({ reload, editing, setEditing }) {
   };
 
   return (
-    <div className="patient-form-container">
+    <div className="patient-form-container" ref={formRef}>
       <h2>{editing ? "Modificar paciente" : "Agregar paciente"}</h2>
       
       {error && <div className="error-message">{error}</div>}
