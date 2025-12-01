@@ -4,7 +4,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 // Importar configuración
-const { PORT, NODE_ENV } = require('./config/server.config');
+const { PORT, NODE_ENV, CORS_ORIGIN } = require('./config/server.config');
 
 // Importar conexiones a bases de datos
 const { sequelize, connect, close } = require('./database/postgresql.connection');
@@ -18,7 +18,13 @@ require('./models/associations');
 const app = express();
 
 // Middleware global
-app.use(cors()); // Permitir peticiones desde el frontend
+// CORS configuration - allow specific origin in production, all origins in development
+const corsOptions = {
+  origin: CORS_ORIGIN === '*' ? true : CORS_ORIGIN.split(',').map(origin => origin.trim()),
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions)); // Permitir peticiones desde el frontend
 app.use(express.json()); // Parsear JSON en el body
 app.use(express.urlencoded({ extended: true })); // Parsear URL-encoded
 
