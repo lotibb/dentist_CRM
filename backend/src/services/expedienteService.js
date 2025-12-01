@@ -5,11 +5,11 @@ const COLLECTION_NAME = 'expedientes';
 
 /**
  * Obtener la colección de expedientes
+ * Note: Session is passed to individual operations, not to the collection itself
  */
-const getCollection = (session = null) => {
+const getCollection = () => {
   const db = getDb();
-  const collection = db.collection(COLLECTION_NAME);
-  return session ? collection.withOptions({ session }) : collection;
+  return db.collection(COLLECTION_NAME);
 };
 
 /**
@@ -182,8 +182,11 @@ async function findById(id, session = null) {
       throw new Error('ID de expediente inválido');
     }
 
-    const collection = getCollection(session);
-    const expediente = await collection.findOne({ _id: new ObjectId(id) });
+    const collection = getCollection();
+    const expediente = await collection.findOne(
+      { _id: new ObjectId(id) },
+      session ? { session } : {}
+    );
     
     if (!expediente) {
       throw new Error('Expediente no encontrado');
@@ -207,7 +210,7 @@ async function createExpediente(data) {
       validateExpediente(data, false);
       const expediente = normalizeExpediente(data, false);
       
-      const collection = getCollection(session);
+      const collection = getCollection();
       
       // Verificar si ya existe un expediente con los mismos datos críticos
       // para prevenir duplicados en condiciones de concurrencia
@@ -269,7 +272,7 @@ async function updateExpediente(id, data) {
       validateExpediente(data, true);
       const updateData = normalizeExpediente(data, true);
       
-      const collection = getCollection(session);
+      const collection = getCollection();
       
       // Obtener el expediente actual con lock para prevenir condiciones de carrera
       const current = await collection.findOne(
@@ -348,7 +351,7 @@ async function deleteExpediente(id) {
     }
 
     await session.withTransaction(async () => {
-      const collection = getCollection(session);
+      const collection = getCollection();
       
       // Verificar que el expediente existe antes de eliminarlo
       const expediente = await collection.findOne(

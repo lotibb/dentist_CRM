@@ -15,18 +15,24 @@ This guide will help you deploy the Dentist CRM backend and frontend to Render.
 
 Ensure your code is pushed to a Git repository (GitHub, GitLab, or Bitbucket).
 
-### 2. Create PostgreSQL Database on Render
+### 2. Database Setup
+
+**Note**: The `render.yaml` is configured to use an existing database service called `db_avanadas`. If you need to create a new database:
 
 1. Go to your Render dashboard
 2. Click "New +" → "PostgreSQL"
 3. Configure:
-   - **Name**: `dentist-crm-db`
+   - **Name**: `dentist-crm-db` (or your preferred name)
    - **Database**: `dentist_crm`
    - **User**: `dentist_crm_user`
    - **Region**: Choose closest to your users
    - **Plan**: Free tier is fine for development
 4. Click "Create Database"
 5. **Important**: Copy the "Internal Database URL" - you'll need this
+
+**For MongoDB** (optional, for expedientes):
+- Create a MongoDB service on Render or use an external MongoDB Atlas instance
+- Copy the connection string for `MONGODB_URI`
 
 ### 3. Deploy the Web Service
 
@@ -146,18 +152,38 @@ The `render.yaml` file includes frontend configuration. When deploying via Bluep
 2. Connect your repository
 3. Configure:
    - **Name**: `dentist-crm-frontend`
-   - **Build Command**: `cd frontend && npm install && npm run build`
-   - **Publish Directory**: `frontend/dist`
+   - **Root Directory**: `frontend` ⚠️ **Important**: Set this to `frontend`
+   - **Build Command**: `npm install && npm run build`
+     - ⚠️ **Note**: No `cd frontend` needed since Root Directory is set
+   - **Publish Directory**: `dist`
+     - ⚠️ **Note**: This is relative to Root Directory, so just `dist` (not `frontend/dist`)
 4. Add Environment Variable:
+   - Go to "Environment" tab
+   - Click "Add Environment Variable"
    - **Key**: `VITE_API_URL`
    - **Value**: `https://your-backend-service.onrender.com` (your actual backend URL)
+     - ⚠️ **Important**: 
+       - Must include `https://`
+       - No trailing slash
+       - Must match your actual backend URL exactly
+5. **Configure Redirects** (Important for React Router):
+   - Go to "Settings" → "Redirects/Rewrites"
+   - Add a redirect rule:
+     - **Source**: `/*`
+     - **Destination**: `/index.html`
+     - **Status Code**: `200` (not 301/302)
+   - This ensures all routes serve `index.html` for client-side routing
 
 ### Important Notes for Frontend
 
 - **Build-time Variables**: Vite requires environment variables to be prefixed with `VITE_`
+  - ⚠️ **Critical**: After setting/changing `VITE_API_URL`, you MUST rebuild the frontend
+  - Environment variables are injected at build time, not runtime
+  - Go to "Manual Deploy" → "Deploy latest commit" after changing env vars
 - **API URL**: Set `VITE_API_URL` to your backend service URL (without trailing slash)
 - **CORS**: Make sure your backend `CORS_ORIGIN` includes your frontend URL
-- **Build Output**: Vite builds to `frontend/dist` directory
+- **Build Output**: Vite builds to `dist` directory (relative to Root Directory)
+- **React Router**: Configure redirects so all routes serve `index.html` for client-side routing
 
 ### Frontend Environment Variables
 
@@ -171,11 +197,19 @@ The `render.yaml` file includes frontend configuration. When deploying via Bluep
 
 1. **Connect Frontend to Backend**: 
    - Set `VITE_API_URL` in frontend to your backend URL
+   - **Rebuild frontend** after setting `VITE_API_URL` (env vars are injected at build time)
    - Set `CORS_ORIGIN` in backend to your frontend URL
-2. **Monitor Logs**: Regularly check Render logs for errors
-3. **Set up Auto-Deploy**: Render automatically deploys on git push (enabled by default)
-4. **Database Backups**: Consider setting up automatic backups for your PostgreSQL database
-5. **Test the Connection**: Visit your frontend URL and verify it can communicate with the backend
+   - Backend will auto-redeploy after setting env vars
+2. **Configure React Router Redirects**:
+   - In frontend service → Settings → Redirects/Rewrites
+   - Add: `/*` → `/index.html` with status `200`
+3. **Monitor Logs**: Regularly check Render logs for errors
+4. **Set up Auto-Deploy**: Render automatically deploys on git push (enabled by default)
+5. **Database Backups**: Consider setting up automatic backups for your databases
+6. **Test the Connection**: 
+   - Visit your frontend URL and verify it can communicate with the backend
+   - Check browser console (F12) for any errors
+   - Test all routes (patients, appointments, medical records)
 
 ## Cost Considerations
 

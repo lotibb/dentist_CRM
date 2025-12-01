@@ -5,7 +5,9 @@
 This is a full-stack Dentist CRM (Customer Relationship Management) application built with:
 - **Frontend**: React with React Router and Vite
 - **Backend**: Node.js with Express
-- **Database**: PostgreSQL with Sequelize ORM
+- **Databases**: 
+  - PostgreSQL with Sequelize ORM (for pacientes, dentistas, citas)
+  - MongoDB (for expedientes/medical records)
 - **Cache**: Redis (optional, for caching)
 
 ## 🏗️ Project Structure
@@ -20,6 +22,7 @@ dentist_CRM/
 │   │   ├── controllers/   # Request handlers
 │   │   │   ├── citasController.js
 │   │   │   ├── dentistasController.js
+│   │   │   ├── expedientesController.js
 │   │   │   └── pacientesController.js
 │   │   ├── models/         # Sequelize models
 │   │   │   ├── associations.js
@@ -33,8 +36,10 @@ dentist_CRM/
 │   │   ├── services/       # Business logic (modular services)
 │   │   │   ├── appointmentService.js
 │   │   │   ├── dentistService.js
+│   │   │   ├── expedienteService.js
 │   │   │   └── patientService.js
 │   │   └── database/       # Database connections
+│   │       ├── mongodb.connection.js
 │   │       ├── postgresql.connection.js
 │   │       └── redis.connection.js
 │   └── package.json
@@ -84,7 +89,9 @@ dentist_CRM/
    PORT=3000
    NODE_ENV=development
    POSTGRESQL_URI=postgresql://username:password@localhost:5432/dentist_crm
-   REDIS_URI=redis://localhost:6379  # Optional
+   MONGODB_URI=mongodb://localhost:27017/dentist_crm  # Optional, for expedientes
+   REDIS_URI=redis://localhost:6379  # Optional, for caching
+   CORS_ORIGIN=*  # For development, set to frontend URL in production
    ```
 
 4. **Start the backend server:**
@@ -118,7 +125,14 @@ dentist_CRM/
    npm install
    ```
 
-3. **Start the frontend development server:**
+3. **Set up environment variables (optional for local development):**
+   Create a `.env.local` file in the `frontend` directory:
+   ```env
+   VITE_API_URL=http://localhost:3000
+   ```
+   If not set, it defaults to `http://localhost:3000`
+
+4. **Start the frontend development server:**
    ```bash
    npm run dev
    ```
@@ -137,8 +151,9 @@ dentist_CRM/
      - `dentistas.js` - Dentist operations
 
 2. **API Base URL:**
-   - All frontend API calls point to `http://localhost:3000`
-   - This is hardcoded in each API file (e.g., `frontend/src/api/citas.js`)
+   - All frontend API calls use a centralized configuration in `frontend/src/config/api.config.js`
+   - Uses `VITE_API_URL` environment variable (defaults to `http://localhost:3000` in development)
+   - In production, set `VITE_API_URL` to your backend URL
 
 3. **Request/Response Format:**
    - **Request**: JSON data sent in the request body (for POST/PUT)
@@ -190,6 +205,14 @@ dentist_CRM/
 - `PUT /citas/:id` - Reschedule appointment (change date/time)
 - `DELETE /citas/:id` - Cancel appointment
 
+### Medical Records (`/expedientes`)
+
+- `GET /expedientes` - List all medical records
+- `GET /expedientes/:id` - Get medical record by ID
+- `POST /expedientes` - Create new medical record
+- `PUT /expedientes/:id` - Update medical record
+- `DELETE /expedientes/:id` - Delete medical record
+
 ## 🗄️ Database Models
 
 The application uses Sequelize ORM with the following models:
@@ -210,8 +233,10 @@ The application uses Sequelize ORM with the following models:
 
 - **Port**: Configurable via `PORT` environment variable (default: 3000)
 - **Environment**: Set via `NODE_ENV` (development/production)
-- **CORS**: Enabled to allow frontend requests
-- **Database**: PostgreSQL connection via Sequelize ORM
+- **CORS**: Configurable via `CORS_ORIGIN` environment variable
+- **Databases**: 
+  - PostgreSQL connection via Sequelize ORM (for pacientes, dentistas, citas)
+  - MongoDB connection (for expedientes/medical records)
 - **Cache**: Redis connection (optional)
 - **Logging**: Morgan middleware in development mode
 - **Error Handling**: Comprehensive error handling with graceful shutdown
@@ -219,9 +244,10 @@ The application uses Sequelize ORM with the following models:
 ### Frontend Configuration
 
 - **Port**: Default `5173` (Vite default, configurable in `vite.config.js`)
-- **API Base URL**: `http://localhost:3000` (hardcoded in API files)
+- **API Base URL**: Configurable via `VITE_API_URL` environment variable (defaults to `http://localhost:3000`)
 - **Build Tool**: Vite with React plugin
-- **Router**: React Router v6
+- **Router**: React Router v6 with BrowserRouter
+- **Environment Variables**: Only variables prefixed with `VITE_` are exposed to client code
 
 ## 🏥 Health Check Endpoint
 
@@ -247,6 +273,13 @@ The `/health` endpoint provides comprehensive status information:
     "redis": {
       "status": "connected",
       "message": "Redis is connected"
+    },
+    "mongodb": {
+      "status": "connected",
+      "message": "MongoDB is connected",
+      "type": "MongoDB",
+      "collections": 1,
+      "database": "dentist_crm"
     }
   }
 }
@@ -265,9 +298,10 @@ The `/health` endpoint provides comprehensive status information:
 
 ### Frontend can't connect to backend
 - Ensure backend is running on port 3000
-- Check CORS is enabled in backend
-- Verify API URLs in `frontend/src/api/*.js` files match backend URL
+- Check `VITE_API_URL` is set correctly (or defaults to `http://localhost:3000`)
+- Verify `CORS_ORIGIN` in backend includes frontend URL (or set to `*` for development)
 - Check browser console for CORS errors
+- In production, ensure `VITE_API_URL` is set and frontend is rebuilt (env vars are injected at build time)
 
 ### Database connection errors
 - Verify PostgreSQL is running
@@ -287,9 +321,10 @@ The `/health` endpoint provides comprehensive status information:
 - **Entry Point**: `backend/src/app.js` (uses `startServer()` function for proper async initialization)
 - **Database**: Uses Sequelize ORM with connection management in `postgresql.connection.js`
 - **Services**: Modular service layer separated by domain:
-  - `appointmentService.js` - Appointment business logic
-  - `dentistService.js` - Dentist business logic
-  - `patientService.js` - Patient business logic
+  - `appointmentService.js` - Appointment business logic (PostgreSQL)
+  - `dentistService.js` - Dentist business logic (PostgreSQL)
+  - `expedienteService.js` - Medical records business logic (MongoDB)
+  - `patientService.js` - Patient business logic (PostgreSQL)
 - **Error Handling**: Comprehensive error handling with unhandled rejection/exception handlers
 - **Graceful Shutdown**: Properly closes database connections on SIGTERM/SIGINT
 - **Transactions**: All database operations use Sequelize transactions for data integrity
@@ -300,6 +335,7 @@ The `/health` endpoint provides comprehensive status information:
 - **Routing**: React Router v6 with BrowserRouter
 - **State Management**: React hooks (useState, useEffect)
 - **API Client**: Axios for HTTP requests
+- **API Configuration**: Centralized in `frontend/src/config/api.config.js` using environment variables
 - **Language**: Spanish UI (all user-facing text is in Spanish)
 
 ### Project Organization
