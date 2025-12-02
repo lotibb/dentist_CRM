@@ -25,7 +25,7 @@ Ensure your code is pushed to a Git repository (GitHub, GitLab, or Bitbucket).
 2. Click "New +" → "PostgreSQL"
 3. Configure:
    - **Name**: `dentist-crm-db` (or your preferred name)
-   - **Database**: `dentist_crm`
+   - **Database**: `db_crm_dentistas`
    - **User**: `dentist_crm_user`
    - **Region**: Choose closest to your users
    - **Plan**: Free tier is fine for development

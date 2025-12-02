@@ -3,8 +3,7 @@
 // Or: mongosh "mongodb://connection-string" mongodb.js
 
 // Select database (or create if it doesn't exist)
-// Note: Replace 'dentist_crm' with your actual database name
-use('dentist_crm');
+use('db_crm_dentistas');
 
 // ============================================
 // COLLECTION: expedientes

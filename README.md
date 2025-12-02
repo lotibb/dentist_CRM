@@ -16,10 +16,26 @@ Este proyecto incluye documentación completa organizada en varios archivos. Use
 
 ### 🗂️ Scripts de Base de Datos
 
+#### PostgreSQL
 | Script | Descripción |
 |--------|-------------|
-| **[backend/scripts/postgresql.sql](./backend/scripts/postgresql.sql)** | Script SQL para crear estructura de PostgreSQL |
-| **[backend/scripts/mongodb.js](./backend/scripts/mongodb.js)** | Script JavaScript para crear estructura de MongoDB |
+| **[scripts/postgresql/postgresql.sql](./scripts/postgresql/postgresql.sql)** | Script SQL para crear estructura de PostgreSQL |
+| **[scripts/postgresql/role_creation.sql](./scripts/postgresql/role_creation.sql)** | Script SQL para crear roles y permisos de PostgreSQL |
+| **[scripts/postgresql/view_roles_privileges.sql](./scripts/postgresql/view_roles_privileges.sql)** | Queries para verificar roles y privilegios |
+
+#### MongoDB
+| Script | Descripción |
+|--------|-------------|
+| **[scripts/mongodb/mongodb.js](./scripts/mongodb/mongodb.js)** | Script JavaScript para crear estructura de MongoDB |
+| **[scripts/mongodb/mongodb_roles.js](./scripts/mongodb/mongodb_roles.js)** | Script JavaScript para crear roles y usuarios de MongoDB |
+| **[scripts/mongodb/view_mongodb_roles.js](./scripts/mongodb/view_mongodb_roles.js)** | Queries para verificar roles y usuarios de MongoDB |
+
+### 🔐 Seguridad y Roles
+
+| Documento | Descripción | Audiencia |
+|-----------|-------------|-----------|
+| **[scripts/postgresql/ROLES_README.md](./scripts/postgresql/ROLES_README.md)** | Guía de roles y permisos de PostgreSQL | DBA, Administradores, Desarrolladores |
+| **[scripts/mongodb/MONGODB_ROLES_README.md](./scripts/mongodb/MONGODB_ROLES_README.md)** | Guía de roles y permisos de MongoDB | DBA, Administradores, Desarrolladores |
 
 ### 📋 Contenido de Cada Documento
 
@@ -63,6 +79,20 @@ Este proyecto incluye documentación completa organizada en varios archivos. Use
 - ✅ Campos, tipos y restricciones
 - ✅ Relaciones entre entidades
 - ✅ Índices y constraints
+
+#### [scripts/postgresql/ROLES_README.md](./scripts/postgresql/ROLES_README.md)
+- ✅ Roles y permisos de PostgreSQL
+- ✅ Instalación y configuración de roles
+- ✅ Gestión de usuarios
+- ✅ Verificación de privilegios
+- ✅ Troubleshooting de seguridad
+
+#### [scripts/mongodb/MONGODB_ROLES_README.md](./scripts/mongodb/MONGODB_ROLES_README.md)
+- ✅ Roles y permisos de MongoDB
+- ✅ Instalación y configuración de roles
+- ✅ Gestión de usuarios
+- ✅ Verificación de privilegios
+- ✅ Troubleshooting de seguridad
 
 ---
 
@@ -157,8 +187,8 @@ dentist_CRM/
    ```env
    PORT=3000
    NODE_ENV=development
-   POSTGRESQL_URI=postgresql://username:password@localhost:5432/dentist_crm
-   MONGODB_URI=mongodb://localhost:27017/dentist_crm  # Optional, for expedientes
+   POSTGRESQL_URI=postgresql://username:password@localhost:5432/db_crm_dentistas
+   MONGODB_URI=mongodb://localhost:27017/db_crm_dentistas  # Optional, for expedientes
    REDIS_URI=redis://localhost:6379  # Optional, for caching
    CORS_ORIGIN=*  # For development, set to frontend URL in production
    ```
@@ -329,7 +359,7 @@ The `/health` endpoint provides comprehensive status information:
       "message": "MongoDB is connected",
       "type": "MongoDB",
       "collections": 1,
-      "database": "dentist_crm"
+      "database": "db_crm_dentistas"
     }
   }
 }
@@ -355,7 +385,8 @@ The `/health` endpoint provides comprehensive status information:
 **Errores de conexión a base de datos:**
 - Verificar que PostgreSQL esté corriendo
 - Verificar las credenciales en `backend/.env`
-- Verificar que la base de datos exista
+- Verificar que la base de datos `db_crm_dentistas` exista
+- Para MongoDB, verificar que la base de datos `db_crm_dentistas` exista
 
 > 📖 **Para troubleshooting de deployment**: Ver [DEPLOYMENT.md](./DEPLOYMENT.md)
 
